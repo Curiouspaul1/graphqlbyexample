@@ -99,12 +99,36 @@ class updateNote(graphene.Mutation):
         return updateNote(ok=ok, note=note)
 
 # delete note
-# get all notes
-# find single note
+class deleteNote(graphene.Mutation):
+    class Arguments:
+        id = graphene.Int()
+    ok = graphene.Boolean()
+    note = graphene.Field(Notes)
 
+    def mutate(root, info, id):
+        note = session.query(NotesModel).filter_by(id=id).first()
+        session.delete(note)
+        ok = True
+        note = note
+        session.commit()
+        return deleteNote(ok=ok, note=note)
 
 class Query(graphene.ObjectType):
     node = relay.Node.Field()
+    # find single note
+    findNote = graphene.Field(Notes, id=graphene.Int())
+    # get all notes by user
+    user_notes = graphene.List(Notes)
+
+    def resolve_user_notes(root, info):
+        # find user with uid from token
+        uid = info.context['uid']
+        user = session.query(UserModel).filter_by(email=uid).first()
+        return user.notes
+
+    def resolve_findNote(root, info, id):
+        return session.query(NotesModel).filter_by(id=id).first()
+    
 
 
 class PreAuthQuery(graphene.ObjectType):
@@ -116,6 +140,7 @@ class PreAuthQuery(graphene.ObjectType):
 class PostAuthMutation(graphene.ObjectType):
     addNote = addNote.Field()
     updateNote = updateNote.Field()
+    deleteNote = deleteNote.Field()
 
 
 class PreAuthMutation(graphene.ObjectType):
